@@ -1,0 +1,17 @@
+{
+  "name": "brewmac-kiosk-backend",
+  "version": "1.0.0",
+  "description": "Backend engine for Brewmac Experience Center",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.5",
+    "@google-cloud/vision": "^4.3.0",
+    "axios": "^1.7.2",
+    "node-cron": "^3.0.3",
+    "cors": "^2.8.5"
+  }
+}
