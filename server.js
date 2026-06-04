@@ -120,6 +120,12 @@ app.post('/api/check-in', async (req, res) => {
         const { mobile, name, company, email, designation, nfcUrl, captureMethod, products } = req.body;
 
         if (!mobile) return res.status(400).json({ error: "Mobile number parameters are mandatory." });
+        
+        // Clean up safe fallbacks for missing name fields
+        const safeName = (name && name.trim()) ? name.trim() : "Walk-in Visitor";
+        const nameParts = safeName.split(/\s+/); // Splits cleanly on any spaces
+        const firstName = nameParts[0] || safeName;
+        const lastName = nameParts.slice(1).join(' ') || "Visitor";
 
         let visitor = await dbPool.query('SELECT * FROM visitors WHERE mobile_number = $1', [mobile]);
         let visitorId, freshsalesId;
@@ -128,16 +134,16 @@ app.post('/api/check-in', async (req, res) => {
             visitorId = visitor.rows[0].id;
             freshsalesId = visitor.rows[0].freshsales_contact_id;
             
-            // Dynamic sync: Instantly updates name/company profile metrics if modified on touchscreen
+            // Dynamic sync: Instantly updates profile metrics if modified on touchscreen
             await dbPool.query(
                 `UPDATE visitors SET full_name = $1, company_name = $2, email = $3, designation = $4, nfc_url = COALESCE(nfc_url, $5), interested_products = $6 WHERE id = $7`,
-                [name, company, email, designation, nfcUrl, products, visitorId]
+                [safeName, company, email, designation, nfcUrl, products, visitorId]
             );
         } else {
             const newVis = await dbPool.query(
                 `INSERT INTO visitors (mobile_number, full_name, company_name, email, designation, nfc_url, interested_products) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-                [mobile, name, company, email, designation, nfcUrl, products]
+                [mobile, safeName, company, email, designation, nfcUrl, products]
             );
             visitorId = newVis.rows[0].id;
 
@@ -145,8 +151,8 @@ app.post('/api/check-in', async (req, res) => {
                 try {
                     const crmResponse = await axios.post(FRESHSALES_URL, {
                         contact: {
-                            first_name: name.split(' ')[0] || name,
-                            last_name: name.split(' ').slice(1).join(' ') || "Visitor",
+                            first_name: firstName,
+                            last_name: lastName,
                             mobile_number: mobile,
                             emails: email || null,
                             job_title: designation || null,
