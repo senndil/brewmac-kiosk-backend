@@ -11,9 +11,20 @@ app.use(cors());
 
 // --- CONFIGURATION MANAGEMENT ---
 const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
-const visionClient = new vision.ImageAnnotatorClient({ keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS });
+
+// Fixed line for Render text-based credentials loading
+const visionClient = new vision.ImageAnnotatorClient({ 
+    credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS) 
+});
+
 const FRESHSALES_URL = `https://${process.env.FRESHSALES_DOMAIN}.freshsales.io/api/contacts`;
-const FRESHSALES_HEADERS = { 'Authorization': `Token token=${process.env.FRESHSALES_API_KEY}`, 'Content-Type': 'application/json' };
+const FRESHSALES_HEADERS = { 
+    'Authorization': `Token token=${process.env.FRESHSALES_API_KEY}`, 
+    'Content-Type': 'application/json' 
+};
+
+// Check if Freshsales is ready or if we are in Test Mode
+const isFreshsalesReady = process.env.FRESHSALES_API_KEY && process.env.FRESHSALES_API_KEY !== 'TEMPORARY_TEST';
 
 // --- AUTOMATION ENGINE: 5-HOUR TIMER CRON WORKER ---
 cron.schedule('*/15 * * * *', async () => {
@@ -29,15 +40,19 @@ cron.schedule('*/15 * * * *', async () => {
         `);
 
         for (const visit of staleVisits.rows) {
-            // Send trigger flag directly to Freshsales via API patch
-            await axios.put(`${FRESHSALES_URL}/${visit.freshsales_contact_id}`, {
-                contact: {
-                    custom_field: {
-                        cf_trigger_whatsapp_feedback: "Trigger Now",
-                        cf_visit_status: "Feedback Pending"
+            if (isFreshsalesReady) {
+                // Send trigger flag directly to Freshsales via API patch
+                await axios.put(`${FRESHSALES_URL}/${visit.freshsales_contact_id}`, {
+                    contact: {
+                        custom_field: {
+                            cf_trigger_whatsapp_feedback: "Trigger Now",
+                            cf_visit_status: "Feedback Pending"
+                        }
                     }
-                }
-            }, { headers: FRESHSALES_HEADERS });
+                }, { headers: FRESHSALES_HEADERS });
+            } else {
+                console.log(`[TEST MODE] 5 Hours exceeded for Visit ID ${visit.visit_id}. Skipping Freshsales WhatsApp trigger.`);
+            }
 
             // Mark locally so we never double-send the alert
             await dbPool.query(`
@@ -59,7 +74,7 @@ function extractCardMetrics(rawText) {
 
     let email = lines.find(l => emailRegex.test(l)) || "";
     let mobile = lines.find(l => phoneRegex.test(l)) || "";
-    let name = lines[0] || ""; // Base baseline assumption: First line is the name
+    let name = lines[0] || ""; 
     let company = lines[1] || "";
 
     return { name, company, email, mobile };
@@ -104,26 +119,32 @@ app.post('/api/check-in', async (req, res) => {
             );
             visitorId = newVis.rows[0].id;
 
-            // Step C: Push real-time to Freshsales CRM
-            const crmResponse = await axios.post(FRESHSALES_URL, {
-                contact: {
-                    first_name: name.split(' ')[0] || name,
-                    last_name: name.split(' ').slice(1).join(' ') || "Visitor",
-                    mobile_number: mobile,
-                    emails: email || null,
-                    job_title: designation || null,
-                    custom_field: {
-                        cf_lead_source: "Experience Center Kiosk",
-                        cf_visit_status: "Checked In",
-                        cf_visitor_capture_method: captureMethod,
-                        cf_nfc_digital_card_url: nfcUrl || null,
-                        cf_interested_products: products || []
+            if (isFreshsalesReady) {
+                // Step C: Push real-time to Freshsales CRM
+                const crmResponse = await axios.post(FRESHSALES_URL, {
+                    contact: {
+                        first_name: name.split(' ')[0] || name,
+                        last_name: name.split(' ').slice(1).join(' ') || "Visitor",
+                        mobile_number: mobile,
+                        emails: email || null,
+                        job_title: designation || null,
+                        custom_field: {
+                            cf_lead_source: "Experience Center Kiosk",
+                            cf_visit_status: "Checked In",
+                            cf_visitor_capture_method: captureMethod,
+                            cf_nfc_digital_card_url: nfcUrl || null,
+                            cf_interested_products: products || []
+                        }
                     }
-                }
-            }, { headers: FRESHSALES_HEADERS });
+                }, { headers: FRESHSALES_HEADERS });
 
-            freshsalesId = crmResponse.data.contact.id;
-            await dbPool.query('UPDATE visitors SET freshsales_contact_id = $1 WHERE id = $2', [freshsalesId, visitorId]);
+                freshsalesId = crmResponse.data.contact.id;
+                await dbPool.query('UPDATE visitors SET freshsales_contact_id = $1 WHERE id = $2', [freshsalesId, visitorId]);
+            } else {
+                freshsalesId = "TEST_MODE_ID_" + Math.floor(Math.random() * 10000);
+                await dbPool.query('UPDATE visitors SET freshsales_contact_id = $1 WHERE id = $2', [freshsalesId, visitorId]);
+                console.log(`[TEST MODE] Saved visitor locally. Generated fake Freshsales ID: ${freshsalesId}`);
+            }
         }
 
         // Step D: Open an active session in the local visits log table
@@ -132,7 +153,7 @@ app.post('/api/check-in', async (req, res) => {
             [visitorId, captureMethod]
         );
 
-        res.json({ success: true, message: "Check-in synchronized cleanly.", freshsalesId });
+        res.json({ success: true, message: "Check-in logged locally.", freshsalesId });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -141,7 +162,7 @@ app.post('/api/check-in', async (req, res) => {
 // --- API ENDPOINT 3: VISITOR CHECK-OUT & FEEDBACK SUBMISSION ---
 app.post('/api/check-out', async (req, res) => {
     try {
-        const { lookupKey, score, comments, followUp } = req.body; // lookupKey can be mobile number or NFC URL
+        const { lookupKey, score, comments, followUp } = req.body; 
 
         // Find active visit session
         const activeSession = await dbPool.query(`
@@ -159,19 +180,23 @@ app.post('/api/check-out', async (req, res) => {
         await dbPool.query(`UPDATE visits SET check_out_time = NOW(), visit_status = 'Completed' WHERE id = $1`, [visit_id]);
         await dbPool.query(`INSERT INTO feedback (visit_id, feedback_score, feedback_comments, follow_up_required) VALUES ($1, $2, $3, $4)`, [visit_id, score, comments, followUp]);
 
-        // Push immediate close-out details to CRM
-        await axios.put(`${FRESHSALES_URL}/${freshsales_contact_id}`, {
-            contact: {
-                custom_field: {
-                    cf_visit_status: "Completed",
-                    cf_feedback_score: score,
-                    cf_feedback_comments: comments,
-                    cf_follow_up_required: followUp
+        if (isFreshsalesReady) {
+            // Push immediate close-out details to CRM
+            await axios.put(`${FRESHSALES_URL}/${freshsales_contact_id}`, {
+                contact: {
+                    custom_field: {
+                        cf_visit_status: "Completed",
+                        cf_feedback_score: score,
+                        cf_feedback_comments: comments,
+                        cf_follow_up_required: followUp
+                    }
                 }
-            }
-        }, { headers: FRESHSALES_HEADERS });
+            }, { headers: FRESHSALES_HEADERS });
+        } else {
+            console.log(`[TEST MODE] Checkout complete for fake Freshsales ID: ${freshsales_contact_id}. Data saved locally.`);
+        }
 
-        res.json({ success: true, message: "Check-out feedback processed flawlessly." });
+        res.json({ success: true, message: "Check-out processed locally." });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
