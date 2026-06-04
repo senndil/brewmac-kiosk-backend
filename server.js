@@ -187,11 +187,12 @@ app.post('/api/check-out', async (req, res) => {
     try {
         const { lookupKey, score, comments, followUp } = req.body; 
 
+        // FIXED LINE: Added the missing "BY" keyword to the SQL query below
         const activeSession = await dbPool.query(`
             SELECT v.id AS visit_id, vis.freshsales_contact_id FROM visits v
             JOIN visitors vis ON v.visitor_id = vis.id
             WHERE (vis.mobile_number = $1 OR vis.nfc_url = $1) AND v.visit_status IN ('Checked In', 'Feedback Pending')
-            ORDER v.check_in_time DESC LIMIT 1
+            ORDER BY v.check_in_time DESC LIMIT 1
         `, [lookupKey]);
 
         if (activeSession.rows.length === 0) return res.status(404).json({ error: "No active check-in session located." });
