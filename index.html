@@ -5,186 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Brewmac Experience Center Kiosk</title>
     <style>
-        :root { 
-            --primary: #0070f3; 
-            --primary-glow: rgba(0, 112, 243, 0.4);
-            --bg-dark: #0a0a0a;
-            --text-light: #f5f5f7; 
-            --glass-bg: rgba(255, 255, 255, 0.07);
-            --glass-border: rgba(255, 255, 255, 0.12);
-        }
-        
+        :root { --primary: #0070f3; --bg: #f4f6f9; --text: #333; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
         
-        body { 
-            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #2e1065, #0f172a);
-            background-size: 400% 400%;
-            animation: gradientMove 15s ease infinite;
-            color: var(--text-light); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            padding: 20px;
-            overflow: hidden;
-        }
+        .kiosk-container { width: 100%; max-width: 600px; height: 95vh; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .header { background: #111; color: white; padding: 40px 20px; text-align: center; border-bottom: 5px solid var(--primary); }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        .header p { color: #aaa; font-size: 1.1rem; }
+        
+        .screen { flex: 1; padding: 40px; display: none; flex-direction: column; justify-content: flex-start; align-items: center; overflow-y: auto; width: 100%; }
+        .screen.active { display: flex; }
+        
+        .btn { width: 100%; max-width: 400px; padding: 24px; font-size: 1.3rem; font-weight: bold; border: none; border-radius: 16px; margin: 15px 0; cursor: pointer; transition: all 0.2s; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: #eaeaea; color: #333; }
+        .btn-secondary:hover { background: #ddd; }
+        .btn-danger { background: #e00; color: white; }
+        
+        /* Floating Reset Escape Hatch Stylings */
+        .btn-restart-home { background: #444; color: white; font-size: 1.1rem; padding: 18px; border-radius: 14px; width: 100%; max-width: 400px; margin-top: auto; margin-bottom: 10px; border: none; cursor: pointer; font-weight: 600; text-align: center; transition: background 0.2s; }
+        .btn-restart-home:hover { background: #222; }
 
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+        .form-group { width: 100%; max-width: 400px; margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 1.1rem; }
+        .form-group input, .form-group select { width: 100%; padding: 16px; border: 2px solid #ccc; border-radius: 12px; font-size: 1.1rem; }
         
-        .kiosk-container { 
-            width: 100%; 
-            max-width: 600px; 
-            height: 95vh; 
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--glass-border);
-            border-radius: 32px; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-            position: relative; 
-        }
-
-        .header { 
-            background: rgba(0, 0, 0, 0.3); 
-            color: white; 
-            padding: 50px 20px 40px 20px; 
-            text-align: center; 
-            border-bottom: 1px solid var(--glass-border);
-            position: relative;
-        }
-        .header h1 { 
-            font-size: 2.2rem; 
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
-        }
-        .header p { color: #94a3b8; font-size: 1.1rem; font-weight: 400; letter-spacing: 0.5px; }
+        #camera-preview { width: 100%; max-width: 400px; height: 300px; background: #222; border-radius: 16px; margin-bottom: 20px; transform: scaleX(-1); object-fit: cover; }
+        .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; max-width: 400px; text-align: left; margin-bottom: 20px; }
+        .checkbox-item { display: flex; align-items: center; padding: 14px; background: #f9f9f9; border-radius: 12px; border: 1px solid #eee; font-size: 1.1rem; font-weight: 500; }
+        .checkbox-item input { margin-right: 14px; transform: scale(1.4); }
         
-        .screen { 
-            flex: 1; 
-            padding: 45px; 
-            display: none; 
-            flex-direction: column; 
-            justify-content: flex-start; 
-            align-items: center; 
-            overflow-y: auto; 
-            width: 100%; 
-        }
-        .screen.active { 
-            display: flex; 
-            animation: fadeInScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.98) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        
-        .btn { 
-            width: 100%; 
-            max-width: 420px; 
-            padding: 24px; 
-            font-size: 1.3rem; 
-            font-weight: 700; 
-            border: none; 
-            border-radius: 20px; 
-            margin: 16px 0; 
-            cursor: pointer; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            text-align: center; 
-        }
-        .btn-primary { 
-            background: linear-gradient(135deg, #0070f3, #0051b3); color: white; 
-            box-shadow: 0 8px 25px var(--primary-glow);
-            position: relative;
-            overflow: hidden;
-        }
-        .btn-primary:active { transform: scale(0.98); box-shadow: 0 4px 10px var(--primary-glow); }
-        
-        .pulse-glow {
-            animation: buttonPulse 2s infinite alternate;
-        }
-        @keyframes buttonPulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 112, 243, 0.4); transform: scale(1); }
-            100% { box-shadow: 0 0 20px 8px rgba(0, 112, 243, 0.1); transform: scale(1.02); }
-        }
-
-        .btn-secondary { 
-            background: var(--glass-bg); 
-            color: var(--text-light); 
-            border: 1px solid var(--glass-border);
-        }
-        .btn-secondary:hover, .btn-secondary:active { background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); }
-        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
-        .btn-danger:active { background: rgba(239, 68, 68, 0.3); }
-        
-        .btn-restart-home { 
-            background: rgba(255, 255, 255, 0.03); 
-            color: #94a3b8; 
-            font-size: 1.1rem; 
-            padding: 18px; 
-            border-radius: 16px; 
-            width: 100%; 
-            max-width: 420px; 
-            margin-top: auto; 
-            margin-bottom: 10px; 
-            border: 1px solid rgba(255, 255, 255, 0.05); 
-            cursor: pointer; 
-            font-weight: 600; 
-            text-align: center; 
-            transition: all 0.2s; 
-        }
-        .btn-restart-home:hover { background: rgba(255, 255, 255, 0.08); color: white; }
-
-        .form-group { width: 100%; max-width: 420px; margin-bottom: 24px; text-align: left; }
-        .form-group label { display: block; font-weight: 600; margin-bottom: 10px; font-size: 1.1rem; color: #cbd5e1; }
-        .form-group input, .form-group select { 
-            width: 100%; 
-            padding: 18px; 
-            background: rgba(0, 0, 0, 0.25);
-            border: 2px solid var(--glass-border); 
-            border-radius: 16px; 
-            font-size: 1.1rem; 
-            color: white;
-            transition: all 0.2s;
-        }
-        .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 15px rgba(0, 112, 243, 0.25); }
-        
-        #camera-preview { width: 100%; max-width: 420px; height: 300px; background: #000; border-radius: 20px; margin-bottom: 20px; transform: scaleX(-1); object-fit: cover; border: 2px solid var(--glass-border); }
-        
-        .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 14px; width: 100%; max-width: 420px; text-align: left; margin-bottom: 20px; }
-        .checkbox-item { 
-            display: flex; 
-            align-items: center; 
-            padding: 18px; 
-            background: rgba(255, 255, 255, 0.03); 
-            border-radius: 16px; 
-            border: 1px solid var(--glass-border); 
-            font-size: 1.1rem; 
-            font-weight: 500; 
-            color: #e2e8f0;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .checkbox-item:has(input:checked) {
-            background: rgba(0, 112, 243, 0.12);
-            border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(0, 112, 243, 0.15);
-        }
-        .checkbox-item input { margin-right: 16px; transform: scale(1.4); cursor: pointer; }
-        
-        .alert-toast { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 24px; border-radius: 20px; text-align: center; font-size: 1.3rem; font-weight: bold; margin-top: 20px; width: 100%; max-width: 420px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); }
-        .spin-down-notice { font-size: 0.9rem; color: #64748b; margin-top: 25px; text-align: center; max-width: 400px; line-height: 1.4; }
+        .alert-toast { background: #4caf50; color: white; padding: 20px; border-radius: 12px; text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 20px; width: 100%; max-width: 400px; display: none; }
+        .spin-down-notice { font-size: 0.9rem; color: #777; margin-top: 5px; text-align: center; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -195,14 +48,12 @@
         <p>Visitor & Feedback Hub</p>
     </div>
 
-    <!-- MAIN HOME LAYOUT SCREEN -->
     <div id="screen-home" class="screen active">
-        <button class="btn btn-primary pulse-glow" style="margin-top: auto;" onclick="showScreen('screen-register-options')">Start Visit</button>
+        <button class="btn btn-primary" style="margin-top: auto;" onclick="showScreen('screen-register-options')">Start Visit</button>
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-exit-identify')">End Visit / Give Feedback</button>
         <p class="spin-down-notice">⚡ Free Server Tier: First wake-up prompt of the day may require up to 50 seconds initialization time.</p>
     </div>
 
-    <!-- REGISTRATION METHODS SCREEN -->
     <div id="screen-register-options" class="screen">
         <button class="btn btn-secondary" onclick="startCardScan()">📸 Scan Business Card</button>
         <button class="btn btn-secondary" onclick="simulateNfcTap()">💳 Tap Digital Card / NFC</button>
@@ -210,14 +61,12 @@
         <button class="btn btn-danger" style="margin-top: auto;" onclick="showScreen('screen-home')">← Back to Main</button>
     </div>
 
-    <!-- WEBCAM OCR VIEW SCREEN -->
     <div id="screen-camera" class="screen">
         <video id="camera-preview" autoplay playsinline></video>
         <button class="btn btn-primary" onclick="capturePhoto()">Capture & Process Card</button>
         <button class="btn btn-secondary" onclick="stopCamera(); showScreen('screen-register-options');">Cancel</button>
     </div>
 
-    <!-- TELEPHONE INPUT SCREEN -->
     <div id="screen-form-mobile" class="screen">
         <div class="form-group" style="margin-top: auto;">
             <label>Enter Mobile Number</label>
@@ -227,7 +76,6 @@
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-register-options')">← Back</button>
     </div>
 
-    <!-- VERIFICATION AND PROFILE EDIT FORM SCREEN -->
     <div id="screen-confirm-fields" class="screen">
         <h3>Verify Registration Details</h3><br>
         <input type="hidden" id="reg-method">
@@ -256,7 +104,6 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
-    <!-- CATALOG SELECTION SCREEN -->
     <div id="screen-product-interest" class="screen">
         <h3>What are you interested in today?</h3><br>
         <div class="checkbox-grid">
@@ -277,7 +124,6 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
-    <!-- CHECKOUT RECOGNITION SCREEN -->
     <div id="screen-exit-identify" class="screen">
         <h3>Identify Yourself to Check Out</h3><br>
         <div class="form-group" style="margin-top: auto;">
@@ -288,7 +134,6 @@
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-home')">Cancel</button>
     </div>
 
-    <!-- EXIT RATING SCREEN -->
     <div id="screen-feedback-form" class="screen">
         <h3>How was your visit today?</h3><br>
         <div class="form-group">
@@ -320,10 +165,9 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
-    <!-- SUBMISSION CONFIRMATION SPLASH SCREEN -->
     <div id="screen-success" class="screen">
         <div class="alert-toast" id="success-toast" style="display: block;">Action Logged Successfully!</div>
-        <br><p style="color: #94a3b8;">This screen will reset automatically in 5 seconds.</p>
+        <br><p>This screen will reset automatically in 5 seconds.</p>
     </div>
 </div>
 
@@ -331,6 +175,7 @@
     const BACKEND_URL = "https://brewmac-kiosk-backend.onrender.com"; 
     let streamInstance = null;
 
+    // Trigger proactive wake-up query to reduce free instance latency
     fetch(`${BACKEND_URL}/api/ping`).then(r => r.json()).then(d => console.log("Server status verified on GST clock.")).catch(e => console.log("Wake-up ping routed. Waiting deployment..."));
 
     function showScreen(screenId) {
@@ -499,6 +344,7 @@
         document.getElementById('success-toast').innerText = messageText;
         showScreen('screen-success');
         
+        // Form field absolute state flushing logic
         document.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"]').forEach(i => i.value = "");
         document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
         document.getElementById('feedback-score').selectedIndex = 0;
