@@ -9,7 +9,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
         
-        /* Scaled to display beautifully across a 21.5" standard vertical layout framework */
         .kiosk-container { width: 100%; max-width: 600px; height: 95vh; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .header { background: #111; color: white; padding: 40px 20px; text-align: center; border-bottom: 5px solid var(--primary); }
         .header h1 { font-size: 2rem; margin-bottom: 10px; }
@@ -24,6 +23,10 @@
         .btn-secondary:hover { background: #ddd; }
         .btn-danger { background: #e00; color: white; }
         
+        /* Floating Reset Escape Hatch Stylings */
+        .btn-restart-home { background: #444; color: white; font-size: 1.1rem; padding: 18px; border-radius: 14px; width: 100%; max-width: 400px; margin-top: auto; margin-bottom: 10px; border: none; cursor: pointer; font-weight: 600; text-align: center; transition: background 0.2s; }
+        .btn-restart-home:hover { background: #222; }
+
         .form-group { width: 100%; max-width: 400px; margin-bottom: 20px; text-align: left; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 1.1rem; }
         .form-group input, .form-group select { width: 100%; padding: 16px; border: 2px solid #ccc; border-radius: 12px; font-size: 1.1rem; }
@@ -34,6 +37,7 @@
         .checkbox-item input { margin-right: 14px; transform: scale(1.4); }
         
         .alert-toast { background: #4caf50; color: white; padding: 20px; border-radius: 12px; text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 20px; width: 100%; max-width: 400px; display: none; }
+        .spin-down-notice { font-size: 0.9rem; color: #777; margin-top: 5px; text-align: center; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -47,6 +51,7 @@
     <div id="screen-home" class="screen active">
         <button class="btn btn-primary" style="margin-top: auto;" onclick="showScreen('screen-register-options')">Start Visit</button>
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-exit-identify')">End Visit / Give Feedback</button>
+        <p class="spin-down-notice">⚡ Free Server Tier: First wake-up prompt of the day may require up to 50 seconds initialization time.</p>
     </div>
 
     <div id="screen-register-options" class="screen">
@@ -96,6 +101,7 @@
             <input type="text" id="reg-designation" placeholder="Enter Job Title">
         </div>
         <button class="btn btn-primary" onclick="showScreen('screen-product-interest')">Confirm & Next</button>
+        <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
     <div id="screen-product-interest" class="screen">
@@ -115,6 +121,7 @@
             <label class="checkbox-item"><input type="checkbox" name="product" value="Investment"> Investment</label>
         </div>
         <button class="btn btn-primary" onclick="submitCheckIn()">Complete Check-In</button>
+        <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
     <div id="screen-exit-identify" class="screen">
@@ -155,6 +162,7 @@
             <input type="text" id="feedback-comments" placeholder="Optional comments...">
         </div>
         <button class="btn btn-primary" onclick="submitCheckOut()">Submit & Check Out</button>
+        <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
     <div id="screen-success" class="screen">
@@ -164,28 +172,28 @@
 </div>
 
 <script>
-    // --- CONNECTED BACKEND API GATEWAY LOCATION HOOK ---
     const BACKEND_URL = "https://brewmac-kiosk-backend.onrender.com"; 
-
     let streamInstance = null;
+
+    // Trigger proactive wake-up query to reduce free instance latency
+    fetch(`${BACKEND_URL}/api/ping`).then(r => r.json()).then(d => console.log("Server status verified on GST clock.")).catch(e => console.log("Wake-up ping routed. Waiting deployment..."));
 
     function showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         const targetScreen = document.getElementById(screenId);
         if (targetScreen) {
             targetScreen.classList.add('active');
-            targetScreen.scrollTop = 0; // Auto reset form view to the top element
+            targetScreen.scrollTop = 0;
         }
     }
 
-    // Camera Access Operations via standard WebRTC streams
     async function startCardScan() {
         showScreen('screen-camera');
         try {
             streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             document.getElementById('camera-preview').srcObject = streamInstance;
         } catch (err) {
-            alert("Camera initialization error: " + err.message);
+            alert("Camera capture uninitialized, checking permissions: " + err.message);
             showScreen('screen-register-options');
         }
     }
@@ -204,7 +212,7 @@
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         stopCamera();
-        showScreen('screen-home'); // Set wait fallback state
+        showScreen('screen-home');
         
         const base64Image = canvas.toDataURL('image/jpeg');
         try {
@@ -224,12 +232,11 @@
             
             showScreen('screen-confirm-fields');
         } catch (err) {
-            alert("OCR processing failed: " + err.message);
+            alert("OCR engine timed out: " + err.message);
             showScreen('screen-register-options');
         }
     }
 
-    // Fully Kiosk Native Antenna Event Hook Registrations [cite: 90, 107]
     document.addEventListener("DOMContentLoaded", function() {
         if (typeof fully !== 'undefined' && typeof fully.registerNfcIntent === "function") {
             fully.registerNfcIntent();
@@ -241,7 +248,7 @@
     };
 
     function simulateNfcTap() {
-        const fakeUrl = prompt("Enter simulated NFC profile payload data:", "https://poplme.co/test-vip-user");
+        const fakeUrl = prompt("Provide simulated NFC payload URL metadata:", "https://poplme.co/test-vip-user");
         if(fakeUrl) handleNfcPayload(fakeUrl);
     }
 
@@ -249,14 +256,12 @@
         document.getElementById('reg-method').value = "Digital Card NFC";
         document.getElementById('reg-nfc-url').value = urlData;
         
-        // Populate standard interactive dummy strings for execution validation
         document.getElementById('reg-mobile').value = "+971501234567";
         document.getElementById('reg-name').value = "NFC Tapped Profile";
         document.getElementById('reg-company').value = "Smart Corporation";
         document.getElementById('reg-email').value = "nfc@example.com";
         document.getElementById('reg-designation').value = "VIP Partner";
         
-        // Intercept workflow path if scanned at departure checkout window
         const exitScreen = document.getElementById('screen-exit-identify');
         if (exitScreen && exitScreen.classList.contains('active')) {
             document.getElementById('input-exit-lookup').value = urlData;
@@ -268,12 +273,11 @@
 
     function processMobileFallback() {
         const num = document.getElementById('input-mobile-lookup').value.trim();
-        if(!num) return alert("Please type a valid mobile number.");
+        if(!num) return alert("Please specify a real entry phone string.");
         
         document.getElementById('reg-method').value = "Mobile Entry";
         document.getElementById('reg-mobile').value = num;
         
-        // Retain empty inputs cleanly to allow manual laptop dashboard typing
         document.getElementById('reg-name').value = "";
         document.getElementById('reg-company').value = "";
         document.getElementById('reg-email').value = "";
@@ -296,7 +300,7 @@
         };
 
         if(!payload.mobile || !payload.name) {
-            return alert("Mobile Number and Full Name fields are strictly mandatory.");
+            return alert("Verification forms require both Name and Phone entries.");
         }
 
         try {
@@ -305,10 +309,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if(!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
+            if(!res.ok) throw new Error(`HTTP Error Code Exception: ${res.status}`);
             triggerSuccessState("Check-In Complete! Welcome to Brewmac.");
         } catch (err) {
-            alert("Check-in processing collapsed: " + err.message);
+            alert("Database transmission failed: " + err.message);
         }
     }
 
@@ -321,7 +325,7 @@
             followUp: selectedFollowUps
         };
 
-        if(!payload.lookupKey) return alert("Please present an NFC card or type your lookup phone entry.");
+        if(!payload.lookupKey) return alert("Please scan card or type lookup entry parameters.");
 
         try {
             const res = await fetch(`${BACKEND_URL}/api/check-out`, {
@@ -329,10 +333,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if(!res.ok) throw new Error("No open checkout record targets found.");
-            triggerSuccessState("Thank you for your feedback! Have a safe trip.");
+            if(!res.ok) throw new Error("No active timeline session matched configuration mapping rules.");
+            triggerSuccessState("Feedback received safely! Have a great day.");
         } catch (err) {
-            alert("Check-out connection failed: " + err.message);
+            alert("Feedback submission failed: " + err.message);
         }
     }
 
@@ -340,7 +344,7 @@
         document.getElementById('success-toast').innerText = messageText;
         showScreen('screen-success');
         
-        // Completely flush input values out of screen buffers
+        // Form field absolute state flushing logic
         document.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"]').forEach(i => i.value = "");
         document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
         document.getElementById('feedback-score').selectedIndex = 0;
