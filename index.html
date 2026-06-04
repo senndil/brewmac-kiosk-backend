@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brewmac Experience Center Kiosk</title>
+    <style>
+        :root { --primary: #0070f3; --bg: #f4f6f9; --text: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        
+        /* Optimized for a 21.5" Vertical Kiosk Screen Display */
+        .kiosk-container { width: 100%; max-width: 600px; height: 95vh; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .header { background: #111; color: white; padding: 40px 20px; text-align: center; border-bottom: 5px solid var(--primary); }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        .header p { color: #aaa; font-size: 1.1rem; }
+        
+        .screen { flex: 1; padding: 40px; display: none; flex-direction: column; justify-content: flex-start; align-items: center; overflow-y: auto; }
+        .screen.active { display: flex; }
+        
+        .btn { width: 100%; max-width: 400px; padding: 24px; font-size: 1.3rem; font-weight: bold; border: none; border-radius: 16px; margin: 15px 0; cursor: pointer; transition: all 0.2s; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: #eaeaea; color: #333; }
+        .btn-secondary:hover { background: #ddd; }
+        .btn-danger { background: #e00; color: white; }
+        
+        .form-group { width: 100%; max-width: 400px; margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 1.1rem; }
+        .form-group input, .form-group select { width: 100%; padding: 16px; border: 2px solid #ccc; border-radius: 12px; font-size: 1.1rem; }
+        
+        #camera-preview { width: 100%; max-width: 400px; height: 300px; background: #222; border-radius: 16px; margin-bottom: 20px; transform: scaleX(-1); object-fit: cover; }
+        .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; max-width: 400px; text-align: left; margin-bottom: 20px; }
+        .checkbox-item { display: flex; align-items: center; padding: 12px; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee; font-size: 1.1rem; }
+        .checkbox-item input { margin-right: 12px; transform: scale(1.4); }
+        
+        .alert-toast { background: #4caf50; color: white; padding: 20px; border-radius: 12px; text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 20px; width: 100%; max-width: 400px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="kiosk-container">
+    <div class="header">
+        <h1 id="kiosk-title">Brewmac Experience Center</h1>
+        <p>Visitor & Feedback Hub</p>
+    </div>
+
+    <!-- HOME SCREEN -->
+    <div id="screen-home" class="screen active">
+        <button class="btn btn-primary" style="margin-top: auto;" onclick="showScreen('screen-register-options')">Start Visit</button>
+        <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-exit-identify')">End Visit / Give Feedback</button>
+    </div>
+
+    <!-- REGISTRATION OPTIONS SCREEN -->
+    <div id="screen-register-options" class="screen">
+        <button class="btn btn-secondary" onclick="startCardScan()">📸 Scan Business Card</button>
+        <button class="btn btn-secondary" onclick="simulateNfcTap()">💳 Tap Digital Card / NFC</button>
+        <button class="btn btn-secondary" onclick="showScreen('screen-form-mobile')">🔢 Enter Mobile Number</button>
+        <button class="btn btn-danger" style="margin-top: auto;" onclick="showScreen('screen-home')">← Back to Main</button>
+    </div>
+
+    <!-- CARD SCANNING SCREEN -->
+    <div id="screen-camera" class="screen">
+        <video id="camera-preview" autoplay playsinline></video>
+        <button class="btn btn-primary" onclick="capturePhoto()">Capture & Process Card</button>
+        <button class="btn btn-secondary" onclick="stopCamera(); showScreen('screen-register-options');">Cancel</button>
+    </div>
+
+    <!-- MOBILE ENTRY FALLBACK SCREEN -->
+    <div id="screen-form-mobile" class="screen">
+        <div class="form-group" style="margin-top: auto;">
+            <label>Enter Mobile Number</label>
+            <input type="tel" id="input-mobile-lookup" placeholder="+971 50 000 0000">
+        </div>
+        <button class="btn btn-primary" onclick="processMobileFallback()">Continue</button>
+        <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-register-options')">← Back</button>
+    </div>
+
+    <!-- REGISTRATION REVIEW/CONFIRM FORM -->
+    <div id="screen-confirm-fields" class="screen">
+        <h3>Verify Registration Details</h3><br>
+        <input type="hidden" id="reg-method">
+        <input type="hidden" id="reg-nfc-url">
+        <div class="form-group">
+            <label>Mobile Number *</label>
+            <input type="tel" id="reg-mobile">
+        </div>
+        <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="reg-name">
+        </div>
+        <div class="form-group">
+            <label>Company Name</label>
+            <input type="text" id="reg-company">
+        </div>
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="reg-email">
+        </div>
+        <div class="form-group">
+            <label>Designation / Job Title</label>
+            <input type="text" id="reg-designation">
+        </div>
+        <button class="btn btn-primary" onclick="showScreen('screen-product-interest')">Confirm & Next</button>
+    </div>
+
+    <!-- PRODUCT INTEREST SELECTION SCREEN -->
+    <div id="screen-product-interest" class="screen">
+        <h3>What are you interested in today?</h3><br>
+        <div class="checkbox-grid">
+            <label class="checkbox-item"><input type="checkbox" name="product" value="Brewmac Classic"> Brewmac Classic</label>
+            <label class="checkbox-item"><input type="checkbox" name="product" value="Brewmac Fusion"> Brewmac Fusion</label>
+            <label class="checkbox-item"><input type="checkbox" name="product" value="Brewmac Mini"> Brewmac Mini</label>
+            <label class="checkbox-item"><input type="checkbox" name="product" value="Prime"> Prime</label>
+            <label class="checkbox-item"><input type="checkbox" name="product" value="Barfit"> Barfit</label>
+            <label class="checkbox-item"><input type="checkbox" name="product" value="Franchise / Distribution"> Franchise / Distribution</label>
+        </div>
+        <button class="btn btn-primary" onclick="submitCheckIn()">Complete Check-In</button>
+    </div>
+
+    <!-- EXIT LOOKUP SCREEN -->
+    <div id="screen-exit-identify" class="screen">
+        <h3>Identify Yourself to Check Out</h3><br>
+        <div class="form-group" style="margin-top: auto;">
+            <label>Enter Mobile Number or Tap NFC Card</label>
+            <input type="text" id="input-exit-lookup" placeholder="Mobile Number or NFC URL link">
+        </div>
+        <button class="btn btn-primary" onclick="showScreen('screen-feedback-form')">Proceed to Feedback</button>
+        <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-home')">Cancel</button>
+    </div>
+
+    <!-- FEEDBACK ENTRY SCREEN -->
+    <div id="screen-feedback-form" class="screen">
+        <h3>How was your visit today?</h3><br>
+        <div class="form-group">
+            <label>Rating Score (1 to 5 Stars)</label>
+            <select id="feedback-score">
+                <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
+                <option value="4">⭐⭐⭐⭐ (Good)</option>
+                <option value="3">⭐⭐⭐ (Average)</option>
+                <option value="2">⭐⭐ (Fair)</option>
+                <option value="1">⭐ (Poor)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Follow-up Actions Requested</label>
+            <div class="checkbox-grid">
+                <label class="checkbox-item"><input type="checkbox" name="followup" value="Send Catalogue"> Send Catalogue</label>
+                <label class="checkbox-item"><input type="checkbox" name="followup" value="Send Pricing"> Send Pricing</label>
+                <label class="checkbox-item"><input type="checkbox" name="followup" value="Prepare Proposal"> Prepare Proposal</label>
+                <label class="checkbox-item"><input type="checkbox" name="followup" value="Schedule Demo"> Schedule Demo</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Any additional comments?</label>
+            <input type="text" id="feedback-comments" placeholder="Optional comments...">
+        </div>
+        <button class="btn btn-primary" onclick="submitCheckOut()">Submit & Check Out</button>
+    </div>
+
+    <!-- GLOBAL SUCCESS PAGE PANEL -->
+    <div id="screen-success" class="screen">
+        <div class="alert-toast" id="success-toast" style="display: block;">Action Logged Successfully!</div>
+        <br><p>This screen will reset automatically in 5 seconds.</p>
+    </div>
+</div>
+
+<script>
+    // Configuration Hook: Live backend Render web app URL structure
+    const BACKEND_URL = "https://onrender.com"; 
+
+    let streamInstance = null;
+
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        const activeScreen = document.getElementById(screenId);
+        if(activeScreen) {
+            activeScreen.classList.add('active');
+            activeScreen.scrollTop = 0; // Ensure long forms scroll back to top upon loading view
+        }
+    }
+
+    // Camera Access Operations
+    async function startCardScan() {
+        showScreen('screen-camera');
+        try {
+            streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            document.getElementById('camera-preview').srcObject = streamInstance;
+        } catch (err) {
+            alert("Camera initialization error: " + err.message);
+            showScreen('screen-register-options');
+        }
+    }
+
+    function stopCamera() {
+        if (streamInstance) {
+            streamInstance.getTracks().forEach(track => track.stop());
+            streamInstance = null;
+        }
+    }
+
+    async function capturePhoto() {
+        const video = document.getElementById('camera-preview');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        stopCamera();
+        showScreen('screen-home'); // Reset visually during asynchronous backend calculation delay
+        
+        const base64Image = canvas.toDataURL('image/jpeg');
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/scan-card`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: base64Image })
+            });
+            const data = await response.json();
+            document.getElementById('reg-method').value = "Business Card OCR";
+            document.getElementById('reg-mobile').value = data.mobile || "";
+            document.getElementById('reg-name').value = data.name || "";
+            document.getElementById('reg-company').value = data.company || "";
+            document.getElementById('reg-email').value = data.email || "";
+            document.getElementById('reg-designation').value = data.designation || "";
+            showScreen('screen-confirm-fields');
+        } catch (err) {
+            alert("OCR processing failed: " + err.message);
+            showScreen('screen-register-options');
+        }
+    }
+
+    // Fully Kiosk Native Hardware NFC Android Event Bind Hooks
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof fully !== 'undefined' && typeof fully.registerNfcIntent === "function") {
+            fully.registerNfcIntent();
+        }
+    });
+
+    // Global background hook called by Fully Kiosk App when hardware scanner reads tag
+    window.onNfcTagRead = function(action, data, uid) {
+        if (data) {
+            handleNfcPayload(data);
+        }
+    };
+
+    function simulateNfcTap() {
+        const fakeUrl = prompt("Enter a simulated NFC Digital Card link details:", "https://poplme.co/example-user-card");
+        if(fakeUrl) handleNfcPayload(fakeUrl);
+    }
+
+    function handleNfcPayload(urlData) {
+        document.getElementById('reg-method').value = "Digital Card NFC";
+        document.getElementById('reg-nfc-url').value = urlData;
+        
+        // Auto-assign interactive lookups (Simulated parsing values logic hook placeholder)
+        document.getElementById('reg-mobile').value = "+971501234567";
+        document.getElementById('reg-name').value = "NFC Tapped Profile";
+        document.getElementById('reg-company').value = "Smart Corporation";
+        document.getElementById('reg-email').value = "nfc@example.com";
+        document.getElementById('reg-designation').value = "VIP Partner";
+        
+        // Switch viewport to checkout workflow logic if scanning at departure terminal window
+        const exitElement = document.getElementById('screen-exit-identify');
+        if (exitElement && exitElement.classList.contains('active')) {
+            document.getElementById('input-exit-lookup').value = urlData;
+            showScreen('screen-feedback-form');
+        } else {
+            showScreen('screen-confirm-fields');
+        }
+    }
+
+    function processMobileFallback() {
+        const num = document.getElementById('input-mobile-lookup').value.trim();
+        if(!num) return alert("Please type a real phone entry value.");
+        document.getElementById('reg-method').value = "Mobile Entry";
+        document.getElementById('reg-mobile').value = num;
+        document.getElementById('reg-name').value = "";
+        document.getElementById('reg-company').value = "";
+        document.getElementById('reg-email').value = "";
+        document.getElementById('reg-designation').value = "";
+        showScreen('screen-confirm-fields');
+    }
+
+    async function submitCheckIn() {
+        const selectedProducts = Array.from(document.querySelectorAll('input[name="product"]:checked')).map(el => el.value);
+        const payload = {
+            mobile: document.getElementById('reg-mobile').value,
+            name: document.getElementById('reg-name').value,
+            company: document.getElementById('reg-company').value,
+            email: document.getElementById('reg-email').value,
+            designation: document.getElementById('reg-designation').value,
+            nfcUrl: document.getElementById('reg-nfc-url').value,
+            captureMethod: document.getElementById('reg-method').value,
+            products: selectedProducts
+        };
+        try {
+            await fetch(`${BACKEND_URL}/api/check-in`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            triggerSuccessState("Check-In Complete! Welcome to Brewmac.");
+        } catch (err) {
+            alert("Check-in request processing dropped: " + err.message);
+        }
+    }
+
+    async function submitCheckOut() {
+        const selectedFollowUps = Array.from(document.querySelectorAll('input[name="followup"]:checked')).map(el => el.value);
+        const payload = {
+            lookupKey: document.getElementById('input-exit-lookup').value,
+            score: parseInt(document.getElementById('feedback-score').value) || 5,
+            comments: document.getElementById('feedback-comments').value,
+            followUp: selectedFollowUps
+        };
+        try {
+            await fetch(`${BACKEND_URL}/api/check-out`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            triggerSuccessState("Thank you for your feedback! Have a safe trip.");
+        } catch (err) {
+            alert("Check-out connection registration failed: " + err.message);
+        }
+    }
+
+    function triggerSuccessState(messageText) {
+        document.getElementById('success-toast').innerText = messageText;
+        showScreen('screen-success');
+        
+        // Reset interactive elements programmatically
+        document.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"]').forEach(i => i.value = "");
+        document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+        document.getElementById('feedback-score').selectedIndex = 0;
+        
+        setTimeout(() => { showScreen('screen-home'); }, 5000);
+    }
+</script>
+</body>
+</html>
