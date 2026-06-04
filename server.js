@@ -5,14 +5,21 @@ const axios = require('axios');
 const cron = require('node-cron');
 const cors = require('cors');
 
+// Force the internal runtime engine into Gulf Standard Time globally
+process.env.TZ = 'Asia/Dubai';
+
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
-// --- DATABASE CONNECTION MANAGEMENT ---
+// --- DATABASE CONNECTION CONFIGURATION ---
 const dbPool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Fixed line for text-based environment credentials loading
+// Initialize database timezone controls on server launch
+dbPool.query("ALTER DATABASE postgres SET timezone TO 'Asia/Dubai';")
+    .then(() => console.log("Supabase database timezone standard successfully synchronized to GST."))
+    .catch(err => console.error("Database timezone initialization error:", err.message));
+
 let visionClient = null;
 try {
     if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -21,7 +28,7 @@ try {
         });
     }
 } catch(e) {
-    console.error("Vision API initialization failed, check credentials string formatting:", e.message);
+    console.error("Vision API initialization suspended, check credential syntax:", e.message);
 }
 
 const FRESHSALES_URL = `https://${process.env.FRESHSALES_DOMAIN}.freshsales.io/api/contacts`;
@@ -30,11 +37,9 @@ const FRESHSALES_HEADERS = {
     'Content-Type': 'application/json' 
 };
 
-// Evaluate runtime mode based on key assignments
 const isFreshsalesReady = process.env.FRESHSALES_API_KEY && process.env.FRESHSALES_API_KEY !== 'TEMPORARY_TEST';
 
 // --- AUTOMATION ENGINE: 5-HOUR TIMER CRON WORKER ---
-// Runs a rolling background validation check every 15 minutes
 cron.schedule('*/15 * * * *', async () => {
     console.log('Running 5-hour visitor tracking routine...');
     try {
@@ -49,7 +54,6 @@ cron.schedule('*/15 * * * *', async () => {
 
         for (const visit of staleVisits.rows) {
             if (isFreshsalesReady) {
-                // Issue manual trigger action patch straight to the CRM database channel
                 await axios.put(`${FRESHSALES_URL}/${visit.freshsales_contact_id}`, {
                     contact: {
                         custom_field: {
@@ -62,7 +66,6 @@ cron.schedule('*/15 * * * *', async () => {
                 console.log(`[TEST MODE] 5 Hours hit for Visit ID ${visit.visit_id}. Skipping Freshsales WhatsApp trigger.`);
             }
 
-            // Flag locally to lock state changes and avoid message double-firing loops
             await dbPool.query(`
                 UPDATE visits 
                 SET whatsapp_triggered = TRUE, whatsapp_trigger_time = NOW(), visit_status = 'Feedback Pending'
@@ -74,7 +77,6 @@ cron.schedule('*/15 * * * *', async () => {
     }
 });
 
-// --- HELPER STRATEGIES: REGEX EXTRACTOR FOR OCR ---
 function extractCardMetrics(rawText) {
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const emailRegex = /[\w.-]+@[\w.-]+\.\w+/;
@@ -88,7 +90,12 @@ function extractCardMetrics(rawText) {
     return { name, company, email, mobile };
 }
 
-// --- API ENDPOINT 1: BUSINESS CARD OCR PROCESSING ---
+// --- API ENDPOINT 1: ALIVE/PING HEALTHCHECK (Prevents Spin-Down Delays) ---
+app.get('/api/ping', (req, res) => {
+    res.json({ status: "online", timezone: "Asia/Dubai", time: new Date().toISOString() });
+});
+
+// --- API ENDPOINT 2: BUSINESS CARD OCR PROCESSING ---
 app.post('/api/scan-card', async (req, res) => {
     try {
         if (!visionClient) return res.status(500).json({ error: "Vision Client uninitialized." });
@@ -107,14 +114,13 @@ app.post('/api/scan-card', async (req, res) => {
     }
 });
 
-// --- API ENDPOINT 2: UNIFIED VISITOR CHECK-IN GATEWAY ---
+// --- API ENDPOINT 3: UNIFIED VISITOR CHECK-IN GATEWAY ---
 app.post('/api/check-in', async (req, res) => {
     try {
         const { mobile, name, company, email, designation, nfcUrl, captureMethod, products } = req.body;
 
         if (!mobile) return res.status(400).json({ error: "Mobile number parameters are mandatory." });
 
-        // Step A: Local Cache Database Screening Rule
         let visitor = await dbPool.query('SELECT * FROM visitors WHERE mobile_number = $1', [mobile]);
         let visitorId, freshsalesId;
 
@@ -122,13 +128,12 @@ app.post('/api/check-in', async (req, res) => {
             visitorId = visitor.rows[0].id;
             freshsalesId = visitor.rows[0].freshsales_contact_id;
             
-            // Re-map field changes directly into local memory rows on check-in
+            // Dynamic sync: Instantly updates name/company profile metrics if modified on touchscreen
             await dbPool.query(
                 `UPDATE visitors SET full_name = $1, company_name = $2, email = $3, designation = $4, nfc_url = COALESCE(nfc_url, $5), interested_products = $6 WHERE id = $7`,
                 [name, company, email, designation, nfcUrl, products, visitorId]
             );
         } else {
-            // Step B: Create a brand new record inside your local database
             const newVis = await dbPool.query(
                 `INSERT INTO visitors (mobile_number, full_name, company_name, email, designation, nfc_url, interested_products) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
@@ -137,7 +142,6 @@ app.post('/api/check-in', async (req, res) => {
             visitorId = newVis.rows[0].id;
 
             if (isFreshsalesReady) {
-                // Step C: Parallel Sync mapping straight to Freshsales CRM
                 try {
                     const crmResponse = await axios.post(FRESHSALES_URL, {
                         contact: {
@@ -157,52 +161,47 @@ app.post('/api/check-in', async (req, res) => {
                     }, { headers: FRESHSALES_HEADERS });
                     freshsalesId = crmResponse.data.contact.id;
                 } catch(e) {
-                    console.error("CRM push failed, defaulting to trace tracking identification setup:", e.message);
-                    freshsalesId = "ERROR_CRM_ID_" + Math.floor(Math.random() * 10000);
+                    console.error("CRM push bypassed, falling back to local storage routing:", e.message);
+                    freshsalesId = "CRM_FALLBACK_ID_" + Math.floor(Math.random() * 10000);
                 }
             } else {
-                // Sandbox Test Execution String Generation
                 freshsalesId = "TEST_MODE_ID_" + Math.floor(Math.random() * 10000);
             }
             await dbPool.query('UPDATE visitors SET freshsales_contact_id = $1 WHERE id = $2', [freshsalesId, visitorId]);
         }
 
-        // Step D: Open an active session in the local visits log timeline table
         await dbPool.query(
             `INSERT INTO visits (visitor_id, capture_method, visit_status) VALUES ($1, $2, 'Checked In')`,
             [visitorId, captureMethod]
         );
 
-        res.json({ success: true, message: "Check-in logged correctly.", freshsalesId });
+        res.json({ success: true, message: "Check-in logged successfully.", freshsalesId });
     } catch (err) {
-        console.error("Check-in internal collapse statement:", err.message);
+        console.error("Check-in processing error:", err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// --- API ENDPOINT 3: VISITOR CHECK-OUT & FEEDBACK SUBMISSION ---
+// --- API ENDPOINT 4: VISITOR CHECK-OUT & FEEDBACK SUBMISSION ---
 app.post('/api/check-out', async (req, res) => {
     try {
         const { lookupKey, score, comments, followUp } = req.body; 
 
-        // Scan database columns to pair check-out strings with active visitor references
         const activeSession = await dbPool.query(`
             SELECT v.id AS visit_id, vis.freshsales_contact_id FROM visits v
             JOIN visitors vis ON v.visitor_id = vis.id
             WHERE (vis.mobile_number = $1 OR vis.nfc_url = $1) AND v.visit_status IN ('Checked In', 'Feedback Pending')
-            ORDER BY v.check_in_time DESC LIMIT 1
+            ORDER v.check_in_time DESC LIMIT 1
         `, [lookupKey]);
 
         if (activeSession.rows.length === 0) return res.status(404).json({ error: "No active check-in session located." });
 
         const { visit_id, freshsales_contact_id } = activeSession.rows[0];
 
-        // Terminate timelines and log feedback structures locally
         await dbPool.query(`UPDATE visits SET check_out_time = NOW(), visit_status = 'Completed' WHERE id = $1`, [visit_id]);
         await dbPool.query(`INSERT INTO feedback (visit_id, feedback_score, feedback_comments, follow_up_required) VALUES ($1, $2, $3, $4)`, [visit_id, score, comments, followUp]);
 
         if (isFreshsalesReady) {
-            // Patch data directly across the active CRM user record field
             await axios.put(`${FRESHSALES_URL}/${freshsales_contact_id}`, {
                 contact: {
                     custom_field: {
@@ -215,11 +214,11 @@ app.post('/api/check-out', async (req, res) => {
             }, { headers: FRESHSALES_HEADERS });
         }
 
-        res.json({ success: true, message: "Check-out structured feedback processed cleanly." });
+        res.json({ success: true, message: "Check-out feedback saved cleanly." });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Brewmac Kiosk Core Server running online on port ${PORT}.`));
+app.listen(PORT, () => console.log(`Brewmac Kiosk Server live on GST timezone port ${PORT}`));
