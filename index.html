@@ -93,68 +93,6 @@
             from { opacity: 0; transform: scale(0.98) translateY(10px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
-
-        /* --- ☕ PREMIUM DRINK ANIMATION HARDWARE INTERFACE --- */
-        .animation-wrapper {
-            margin: auto 0; /* Vertically balances itself directly in the center of the home screen */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            animation: floatUpDown 4s ease-in-out infinite;
-        }
-
-        /* Gentle floating animation */
-        @keyframes floatUpDown {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-            100% { transform: translateY(0px); }
-        }
-
-        .drink-container {
-            position: relative;
-            width: 120px;
-            height: 140px;
-            background: transparent;
-        }
-
-        /* Dynamic Rising Steam Blocks */
-        .steam-line {
-            position: absolute;
-            width: 4px;
-            height: 30px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            filter: blur(2px);
-            animation: riseSteam 2s infinite linear;
-            top: -15px;
-        }
-        .steam1 { left: 40px; animation-delay: 0s; }
-        .steam2 { left: 60px; animation-delay: 0.6s; }
-        .steam3 { left: 80px; animation-delay: 1.2s; }
-
-        @keyframes riseSteam {
-            0% { transform: translateY(10px) scaleY(0.5); opacity: 0; }
-            50% { opacity: 0.5; }
-            100% { transform: translateY(-25px) scaleY(1.5); opacity: 0; }
-        }
-
-        /* SVG Vector Drink Cup Layout styling */
-        .coffee-cup {
-            fill: #f5f5f7;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
-        }
-        .coffee-liquid {
-            fill: #6f4e37; /* Clean, recognizable coffee color hue */
-            animation: swirlLiquid 3s infinite ease-in-out alternate;
-            transform-origin: center;
-        }
-
-        @keyframes swirlLiquid {
-            0% { transform: rotate(-3deg) scaleY(0.95); }
-            100% { transform: rotate(3deg) scaleY(1.05); }
-        }
-        /* --------------------------------------------------- */
         
         /* Premium UI Button Centering Adjustments */
         .btn { 
@@ -168,6 +106,8 @@
             margin: 16px 0; 
             cursor: pointer; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            
+            /* Core Fix: Absolute Text Alignment Centering Control */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -181,6 +121,7 @@
         }
         .btn-primary:active { transform: scale(0.98); box-shadow: 0 4px 10px var(--primary-glow); }
         
+        /* Pulsing Home Interactive Overlay Indicator */
         .pulse-glow {
             animation: buttonPulse 2s infinite alternate;
         }
@@ -212,6 +153,8 @@
             cursor: pointer; 
             font-weight: 600; 
             transition: all 0.2s; 
+            
+            /* Core Fix: Ensure Cancel button text centers flawlessly */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -219,6 +162,7 @@
         }
         .btn-restart-home:hover { background: rgba(255, 255, 255, 0.08); color: white; }
 
+        /* Form Inputs Glassmorphic Upgrades */
         .form-group { width: 100%; max-width: 420px; margin-bottom: 24px; text-align: left; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 10px; font-size: 1.1rem; color: #cbd5e1; }
         .form-group input, .form-group select { 
@@ -284,34 +228,13 @@
         <p>Visitor & Feedback Hub</p>
     </div>
 
-    <!-- MAIN HOME LAYOUT SCREEN -->
     <div id="screen-home" class="screen active">
+        <button class="btn btn-primary pulse-glow" style="margin-top: auto;" onclick="showScreen('screen-register-options')">Start Visit</button>
+        <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-exit-identify')">End Visit / Give Feedback</button>
         
-        <!-- LIVE DRINK POURING OVERLAY MATRIX -->
-        <div class="animation-wrapper">
-            <div class="drink-container">
-                <div class="steam-line steam1"></div>
-                <div class="steam-line steam2"></div>
-                <div class="steam-line steam3"></div>
-                <svg viewBox="0 0 100 100" width="100%" height="100%">
-                    <!-- Interactive Liquid Vector Area -->
-                    <path class="coffee-liquid" d="M25,50 Q50,47 75,50 L70,80 Q50,83 30,80 Z" />
-                    <!-- Solid High-Gloss Ceramic Cup Shell Structure -->
-                    <path class="coffee-cup" fill-rule="evenodd" d="M20,40 L80,40 Q85,40 82,45 L73,83 Q70,90 60,90 L40,90 Q30,90 27,83 L18,45 Q15,40 20,40 Z M78,46 L22,46 L30,82 Q32,85 36,85 L64,85 Q68,85 70,82 L78,46 Z" />
-                    <!-- Structural Coffee Cup Side Handle Link -->
-                    <path class="coffee-cup" d="M78,50 Q92,50 90,65 Q88,75 75,75 L74,70 Q83,70 84,63 Q85,56 77,56 Z" />
-                </svg>
-            </div>
-        </div>
-
-        <button class="btn btn-primary pulse-glow" onclick="showScreen('screen-register-options')">Start Visit</button>
-        <button class="btn btn-secondary" onclick="showScreen('screen-exit-identify')">End Visit / Give Feedback</button>
-        
-        <!-- Corporate Identity Anchor -->
         <div class="company-footer">COGMAC TECHNOLOGIES MIDDLE EAST</div>
     </div>
 
-    <!-- REGISTRATION METHODS SCREEN -->
     <div id="screen-register-options" class="screen">
         <button class="btn btn-secondary" onclick="startCardScan()">📸 Scan Business Card</button>
         <button class="btn btn-secondary" onclick="simulateNfcTap()">💳 Tap Digital Card / NFC</button>
@@ -319,14 +242,12 @@
         <button class="btn btn-danger" style="margin-top: auto;" onclick="showScreen('screen-home')">← Back to Main</button>
     </div>
 
-    <!-- WEBCAM OCR VIEW SCREEN -->
     <div id="screen-camera" class="screen">
         <video id="camera-preview" autoplay playsinline></video>
         <button class="btn btn-primary" onclick="capturePhoto()">Capture & Process Card</button>
         <button class="btn btn-secondary" onclick="stopCamera(); showScreen('screen-register-options');">Cancel</button>
     </div>
 
-    <!-- TELEPHONE INPUT SCREEN -->
     <div id="screen-form-mobile" class="screen">
         <div class="form-group" style="margin-top: auto;">
             <label>Enter Mobile Number</label>
@@ -336,7 +257,6 @@
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-register-options')">← Back</button>
     </div>
 
-    <!-- VERIFICATION AND PROFILE EDIT FORM SCREEN -->
     <div id="screen-confirm-fields" class="screen">
         <h3>Verify Registration Details</h3><br>
         <input type="hidden" id="reg-method">
@@ -365,7 +285,6 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
-    <!-- CATALOG SELECTION SCREEN -->
     <div id="screen-product-interest" class="screen">
         <h3>What are you interested in today?</h3><br>
         <div class="checkbox-grid">
@@ -386,7 +305,6 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
-    <!-- CHECKOUT RECOGNITION SCREEN -->
     <div id="screen-exit-identify" class="screen">
         <h3>Identify Yourself to Check Out</h3><br>
         <div class="form-group" style="margin-top: auto;">
@@ -397,7 +315,6 @@
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-home')">Cancel</button>
     </div>
 
-    <!-- EXIT RATING SCREEN -->
     <div id="screen-feedback-form" class="screen">
         <h3>How was your visit today?</h3><br>
         <div class="form-group">
@@ -429,7 +346,6 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
-    <!-- SUBMISSION CONFIRMATION SPLASH SCREEN -->
     <div id="screen-success" class="screen">
         <div class="alert-toast" id="success-toast" style="display: block;">Action Logged Successfully!</div>
         <br><p style="color: #94a3b8;">This screen will reset automatically in 5 seconds.</p>
