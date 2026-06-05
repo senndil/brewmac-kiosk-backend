@@ -46,7 +46,7 @@
             background: transparent; 
             color: var(--text-main); 
             padding: 60px 45px 30px 45px; 
-            text-align: left; /* Left-aligned typography matching reference image */
+            text-align: left; 
         }
         .header h1 { 
             font-size: 3rem; 
@@ -143,8 +143,7 @@
             text-shadow: 0 2px 4px rgba(0,0,0,0.15);
         }
         .tile-visitor-pass .tile-title { font-size: 2.2rem; }
-        /* ---------------------------------------------------- */
-
+        
         /* Standard Internal Form Control Layout Buttons */
         .btn { 
             width: 100%; 
@@ -187,7 +186,7 @@
         }
         .btn-restart-home:hover { background: #f1f5f9; color: #334155; }
 
-        /* Form Control Inputs */
+        /* Form Control Inputs & Premium Validation States */
         .form-group { width: 100%; max-width: 450px; margin-bottom: 20px; text-align: left; }
         .form-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 1.05rem; color: #334155; }
         .form-group input, .form-group select { 
@@ -198,9 +197,29 @@
             border-radius: 14px; 
             font-size: 1.1rem; 
             color: var(--text-main);
-            transition: border 0.2s;
+            transition: all 0.2s;
         }
         .form-group input:focus, .form-group select:focus { border-color: #1e3a8a; outline: none; }
+        
+        /* Inline Error Message Layouts */
+        .error-message {
+            color: #be123c;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 6px;
+            display: none; 
+            animation: fadeInError 0.2s ease-out forwards;
+        }
+        .input-error {
+            border-color: #fca5a5 !important;
+            background-color: #fff1f2 !important;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+        }
+
+        @keyframes fadeInError {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         
         #camera-preview { width: 100%; max-width: 450px; height: 320px; background: #000; border-radius: 24px; margin-bottom: 20px; transform: scaleX(-1); object-fit: cover; border: 1px solid #cbd5e1; }
         
@@ -241,7 +260,6 @@
             color: #1e3a8a;
             letter-spacing: 0.5px;
         }
-        /* Custom geometric logo matching image configuration vectors */
         .logo-icon-shape {
             width: 24px;
             height: 24px;
@@ -273,7 +291,7 @@
         <p id="kiosk-desc">New here? Please select an action card below to check in or log your showroom feedback session.</p>
     </div>
 
-    <!-- MAIN DASHBOARD TILE SCREEN (MATCHING IMAGE REFERENCE) -->
+    <!-- MAIN DASHBOARD TILE SCREEN -->
     <div id="screen-home" class="screen active">
         <div class="tile-grid">
             <button class="tile tile-visitor-pass" onclick="modifyWelcomeLabels('Visitor Registration', 'Please select your preferred quick profiling ingestion technique below.'); showScreen('screen-register-options')">
@@ -316,17 +334,19 @@
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-register-options')">← Back</button>
     </div>
 
-    <!-- VERIFICATION AND PROFILE EDIT FORM SCREEN -->
+    <!-- VERIFICATION AND PROFILE EDIT FORM SCREEN WITH INLINE VAL UNITS -->
     <div id="screen-confirm-fields" class="screen">
         <input type="hidden" id="reg-method">
         <input type="hidden" id="reg-nfc-url">
         <div class="form-group">
             <label>Mobile Number *</label>
-            <input type="tel" id="reg-mobile">
+            <input type="tel" id="reg-mobile" oninput="clearInputError(this)">
+            <div id="error-reg-mobile" class="error-message">A mobile number is required to finalize check-in.</div>
         </div>
         <div class="form-group">
             <label>Full Name *</label>
-            <input type="text" id="reg-name" placeholder="Enter Full Name">
+            <input type="text" id="reg-name" placeholder="Enter Full Name" oninput="clearInputError(this)">
+            <div id="error-reg-name" class="error-message">Please share your name so we can personalize your experience.</div>
         </div>
         <div class="form-group">
             <label>Company Name</label>
@@ -377,7 +397,7 @@
     <!-- EXIT RATING SCREEN -->
     <div id="screen-feedback-form" class="screen">
         <div class="form-group">
-            <label>Rating Score (1 to 5 Stars)</label>
+            <label>How was your visit today?</label>
             <select id="feedback-score">
                 <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
                 <option value="4">⭐⭐⭐⭐ (Good)</option>
@@ -428,10 +448,10 @@
     const BACKEND_URL = "https://brewmac-kiosk-backend.onrender.com"; 
     let streamInstance = null;
 
-    // Proactive backend wakeup query
-    fetch(`${BACKEND_URL}/api/ping`).then(r => r.json()).catch(e => console.log("Wake-up routed."));
+    // Wake up backend engine proactively
+    fetch(`${BACKEND_URL}/api/ping`).then(r => r.json()).catch(e => console.log("Engine pinged."));
 
-    // Hardcoded global date/time controller logic matching layout panel
+    // Gulf Standard Time Live Clock Syncer
     function updateLiveClock() {
         const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dubai' };
         const optionsDate = { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'Asia/Dubai' };
@@ -461,13 +481,19 @@
         showScreen('screen-home');
     }
 
+    function clearInputError(inputElement) {
+        inputElement.classList.remove('input-error');
+        const errorDiv = document.getElementById(`error-${inputElement.id}`);
+        if (errorDiv) errorDiv.style.display = 'none';
+    }
+
     async function startCardScan() {
         showScreen('screen-camera');
         try {
             streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             document.getElementById('camera-preview').srcObject = streamInstance;
         } catch (err) {
-            alert("Camera capture uninitialized: " + err.message);
+            alert("Camera device access dropped: " + err.message);
             showScreen('screen-register-options');
         }
     }
@@ -507,7 +533,7 @@
             modifyWelcomeLabels('Verify Identity', 'Please confirm or edit your company card metrics profile details below.');
             showScreen('screen-confirm-fields');
         } catch (err) {
-            alert("OCR engine timed out: " + err.message);
+            alert("Card processor timed out: " + err.message);
             showScreen('screen-register-options');
         }
     }
@@ -565,6 +591,12 @@
     }
 
     async function submitCheckIn() {
+        // Reset validation highlighting rules
+        document.getElementById('reg-name').classList.remove('input-error');
+        document.getElementById('error-reg-name').style.display = 'none';
+        document.getElementById('reg-mobile').classList.remove('input-error');
+        document.getElementById('error-reg-mobile').style.display = 'none';
+
         const selectedProducts = Array.from(document.querySelectorAll('input[name="product"]:checked')).map(el => el.value);
         const payload = {
             mobile: document.getElementById('reg-mobile').value.trim(),
@@ -577,7 +609,22 @@
             products: selectedProducts
         };
 
-        if(!payload.mobile || !payload.name) return alert("Verification forms require both Name and Phone entries.");
+        let validationFailed = false;
+
+        if (!payload.name) {
+            document.getElementById('reg-name').classList.add('input-error');
+            document.getElementById('error-reg-name').style.display = 'block';
+            validationFailed = true;
+        }
+        if (!payload.mobile) {
+            document.getElementById('reg-mobile').classList.add('input-error');
+            document.getElementById('error-reg-mobile').style.display = 'block';
+            validationFailed = true;
+        }
+        if (validationFailed) {
+            document.getElementById('screen-confirm-fields').scrollTop = 0;
+            return;
+        }
 
         try {
             const res = await fetch(`${BACKEND_URL}/api/check-in`, {
@@ -585,10 +632,13 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if(!res.ok) throw new Error(`HTTP Error Code Exception: ${res.status}`);
-            triggerSuccessState("Check-In Complete! Welcome to Brewmac.");
+            
+            if(!res.ok) {
+                return alert("We're having trouble saving your registration right now. Please notify a showroom host or try clicking the button once more.");
+            }
+            triggerSuccessState("Check-In Complete! Welcome to the Brewmac Experience.");
         } catch (err) {
-            alert("Database transmission failed: " + err.message);
+            alert("Network Notice: The kiosk lost connection to the local server. Please wait a moment and try again.");
         }
     }
 
@@ -601,7 +651,9 @@
             followUp: selectedFollowUps
         };
 
-        if(!payload.lookupKey) return alert("Please scan card or type lookup entry parameters.");
+        if(!payload.lookupKey) {
+            return alert("Please enter your phone number or tap your card so we can locate your visit file.");
+        }
 
         try {
             const res = await fetch(`${BACKEND_URL}/api/check-out`, {
@@ -609,10 +661,16 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if(!res.ok) throw new Error("No active session located matching parameters.");
-            triggerSuccessState("Feedback received safely! Have a great day.");
+            
+            if (res.status === 404) {
+                return alert("We couldn't locate an active check-in session for this number. Please make sure you registered at entry, or ask our hospitality team for assistance.");
+            } else if (!res.ok) {
+                return alert("We were unable to save your feedback due to a system reset. Your input is valuable to us—please try clicking submit once more.");
+            }
+            
+            triggerSuccessState("Thank you for sharing your thoughts! Have a wonderful day ahead.");
         } catch (err) {
-            alert("Feedback submission failed: " + err.message);
+            alert("Connection Notice: We couldn't reach the server to close your visit. Please inform your showroom host before departing.");
         }
     }
 
