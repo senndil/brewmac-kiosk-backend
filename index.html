@@ -7,21 +7,17 @@
     <style>
         :root { 
             --primary: #0070f3; 
-            --primary-glow: rgba(0, 112, 243, 0.4);
-            --bg-dark: #0a0a0a;
-            --text-light: #f5f5f7; 
-            --glass-bg: rgba(255, 255, 255, 0.07);
-            --glass-border: rgba(255, 255, 255, 0.12);
+            --primary-glow: rgba(0, 112, 243, 0.2);
+            --bg-light: #f8fafc;
+            --text-main: #0f172a; 
+            --text-muted: #475569;
+            --border-color: #e2e8f0;
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         
-        /* Smooth CSS Dynamic Moving Background Mesh Gradient */
         body { 
-            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #2e1065, #0f172a);
-            background-size: 400% 400%;
-            animation: gradientMove 15s ease infinite;
-            color: var(--text-light); 
+            background: #1e293b; /* Premium dark structural contrast outside the kiosk bezel */
             display: flex; 
             justify-content: center; 
             align-items: center; 
@@ -29,54 +25,41 @@
             padding: 20px;
             overflow: hidden;
         }
-
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
         
-        /* 21.5" Vertical Glassmorphic Container Layout Configuration */
+        /* 21.5" Vertical Clean Light Canvas matching image_b3d507.jpg */
         .kiosk-container { 
             width: 100%; 
             max-width: 600px; 
             height: 95vh; 
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--glass-border);
-            border-radius: 32px; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+            background: var(--bg-light);
+            border-radius: 40px; 
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7); 
             display: flex; 
             flex-direction: column; 
             overflow: hidden; 
             position: relative; 
+            border: 8px solid #0f172a;
         }
 
-        /* Animated Glowing Header Banner */
+        /* Clean Executive Welcome Banner */
         .header { 
-            background: rgba(0, 0, 0, 0.3); 
-            color: white; 
-            padding: 50px 20px 40px 20px; 
-            text-align: center; 
-            border-bottom: 1px solid var(--glass-border);
-            position: relative;
+            background: transparent; 
+            color: var(--text-main); 
+            padding: 60px 45px 30px 45px; 
+            text-align: left; /* Left-aligned typography matching reference image */
         }
         .header h1 { 
-            font-size: 2.2rem; 
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
+            font-size: 3rem; 
+            font-weight: 700;
+            color: #1e3a8a;
+            letter-spacing: -1px;
+            margin-bottom: 12px;
         }
-        .header p { color: #94a3b8; font-size: 1.1rem; font-weight: 400; letter-spacing: 0.5px; }
+        .header p { color: var(--text-muted); font-size: 1.2rem; font-weight: 400; line-height: 1.5; max-width: 450px; }
         
-        /* Core Screen Shell Configuration with Animation Hooks */
         .screen { 
             flex: 1; 
-            padding: 45px; 
+            padding: 0 45px 35px 45px; 
             display: none; 
             flex-direction: column; 
             justify-content: flex-start; 
@@ -86,137 +69,199 @@
         }
         .screen.active { 
             display: flex; 
-            animation: fadeInScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: screenFadeIn 0.35s ease-out forwards;
         }
 
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.98) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes screenFadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Premium UI Button Centering Adjustments */
+        /* --- ASYMMETRIC DASHBOARD TILE GRID LAYER (FROM IMAGE_b3d507.jpg) --- */
+        .tile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 180px 140px 140px;
+            gap: 20px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .tile {
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            align-items: flex-end;
+            padding: 24px;
+            text-align: left;
+            text-decoration: none;
+        }
+        .tile:active { transform: scale(0.97); box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
+
+        /* Full Width Main Pass Accent Card */
+        .tile-visitor-pass {
+            grid-column: 1 / span 2;
+            background: linear-gradient(135deg, rgba(29, 78, 216, 0.95), rgba(30, 64, 175, 0.85)), url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+        /* Left Column Split Accent Card */
+        .tile-concierge {
+            grid-column: 1 / span 1;
+            background: linear-gradient(135deg, rgba(190, 24, 74, 0.92), rgba(157, 23, 77, 0.85)), url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+        /* Right Column Double Span Vertical Accent Card */
+        .tile-directory {
+            grid-column: 2 / span 1;
+            grid-row: 2 / span 2;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)), url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=400&q=80');
+            background-size: cover;
+            background-position: center;
+            align-items: flex-end;
+        }
+        /* Bottom Left Split Accent Card */
+        .tile-amenities {
+            grid-column: 1 / span 1;
+            background: linear-gradient(135deg, rgba(219, 39, 119, 0.9), rgba(190, 24, 74, 0.85)), url('https://images.unsplash.com/photo-1564540583246-934407b7b1ca?auto=format&fit=crop&w=400&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .tile-title {
+            color: white;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .tile-visitor-pass .tile-title { font-size: 2.2rem; }
+        /* ---------------------------------------------------- */
+
+        /* Standard Internal Form Control Layout Buttons */
         .btn { 
             width: 100%; 
-            max-width: 420px; 
-            padding: 24px; 
-            font-size: 1.3rem; 
+            max-width: 450px; 
+            padding: 22px; 
+            font-size: 1.2rem; 
             font-weight: 700; 
             border: none; 
-            border-radius: 20px; 
-            margin: 16px 0; 
+            border-radius: 18px; 
+            margin: 12px 0; 
             cursor: pointer; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            
-            /* Core Fix: Absolute Text Alignment Centering Control */
+            transition: all 0.2s; 
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center; 
         }
-        .btn-primary { 
-            background: linear-gradient(135deg, #0070f3, #0051b3); color: white; 
-            box-shadow: 0 8px 25px var(--primary-glow);
-            position: relative;
-            overflow: hidden;
-        }
-        .btn-primary:active { transform: scale(0.98); box-shadow: 0 4px 10px var(--primary-glow); }
-        
-        /* Pulsing Home Interactive Overlay Indicator */
-        .pulse-glow {
-            animation: buttonPulse 2s infinite alternate;
-        }
-        @keyframes buttonPulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 112, 243, 0.4); transform: scale(1); }
-            100% { box-shadow: 0 0 20px 8px rgba(0, 112, 243, 0.1); transform: scale(1.02); }
-        }
+        .btn-primary { background: #1e3a8a; color: white; box-shadow: 0 8px 20px rgba(30, 58, 138, 0.25); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        .btn-secondary:active { background: #e2e8f0; }
+        .btn-danger { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
 
-        .btn-secondary { 
-            background: var(--glass-bg); 
-            color: var(--text-light); 
-            border: 1px solid var(--glass-border);
-        }
-        .btn-secondary:hover, .btn-secondary:active { background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); }
-        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
-        .btn-danger:active { background: rgba(239, 68, 68, 0.3); }
-        
         .btn-restart-home { 
-            background: rgba(255, 255, 255, 0.03); 
-            color: #94a3b8; 
+            background: #f8fafc; 
+            color: #64748b; 
             font-size: 1.1rem; 
             padding: 18px; 
             border-radius: 16px; 
             width: 100%; 
-            max-width: 420px; 
+            max-width: 450px; 
             margin-top: auto; 
             margin-bottom: 10px; 
-            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border: 1px solid #e2e8f0; 
             cursor: pointer; 
             font-weight: 600; 
-            transition: all 0.2s; 
-            
-            /* Core Fix: Ensure Cancel button text centers flawlessly */
             display: flex;
             align-items: center;
             justify-content: center;
-            text-align: center;
         }
-        .btn-restart-home:hover { background: rgba(255, 255, 255, 0.08); color: white; }
+        .btn-restart-home:hover { background: #f1f5f9; color: #334155; }
 
-        /* Form Inputs Glassmorphic Upgrades */
-        .form-group { width: 100%; max-width: 420px; margin-bottom: 24px; text-align: left; }
-        .form-group label { display: block; font-weight: 600; margin-bottom: 10px; font-size: 1.1rem; color: #cbd5e1; }
+        /* Form Control Inputs */
+        .form-group { width: 100%; max-width: 450px; margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 1.05rem; color: #334155; }
         .form-group input, .form-group select { 
             width: 100%; 
             padding: 18px; 
-            background: rgba(0, 0, 0, 0.25);
-            border: 2px solid var(--glass-border); 
-            border-radius: 16px; 
+            background: white;
+            border: 2px solid #cbd5e1; 
+            border-radius: 14px; 
             font-size: 1.1rem; 
-            color: white;
-            transition: all 0.2s;
+            color: var(--text-main);
+            transition: border 0.2s;
         }
-        .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 15px rgba(0, 112, 243, 0.25); }
+        .form-group input:focus, .form-group select:focus { border-color: #1e3a8a; outline: none; }
         
-        #camera-preview { width: 100%; max-width: 420px; height: 300px; background: #000; border-radius: 20px; margin-bottom: 20px; transform: scaleX(-1); object-fit: cover; border: 2px solid var(--glass-border); }
+        #camera-preview { width: 100%; max-width: 450px; height: 320px; background: #000; border-radius: 24px; margin-bottom: 20px; transform: scaleX(-1); object-fit: cover; border: 1px solid #cbd5e1; }
         
-        .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 14px; width: 100%; max-width: 420px; text-align: left; margin-bottom: 20px; }
+        .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; max-width: 450px; text-align: left; margin-bottom: 20px; }
         .checkbox-item { 
             display: flex; 
             align-items: center; 
             padding: 18px; 
-            background: rgba(255, 255, 255, 0.03); 
-            border-radius: 16px; 
-            border: 1px solid var(--glass-border); 
+            background: white; 
+            border-radius: 14px; 
+            border: 1px solid #cbd5e1; 
             font-size: 1.1rem; 
-            font-weight: 500; 
-            color: #e2e8f0;
-            transition: all 0.2s;
+            font-weight: 600; 
+            color: #334155;
             cursor: pointer;
         }
-        .checkbox-item:has(input:checked) {
-            background: rgba(0, 112, 243, 0.12);
-            border-color: var(--primary);
-            box-shadow: 0 0 15px rgba(0, 112, 243, 0.15);
-        }
-        .checkbox-item input { margin-right: 16px; transform: scale(1.4); cursor: pointer; }
+        .checkbox-item:has(input:checked) { background: #eff6ff; border-color: #1e3a8a; }
+        .checkbox-item input { margin-right: 16px; transform: scale(1.4); }
         
-        .alert-toast { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 24px; border-radius: 20px; text-align: center; font-size: 1.3rem; font-weight: bold; margin-top: 20px; width: 100%; max-width: 420px; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); }
+        .alert-toast { background: #10b981; color: white; padding: 24px; border-radius: 20px; text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 20px; width: 100%; max-width: 450px; }
         
-        /* Luxury Corporate Branding Footer Layout */
-        .company-footer { 
-            font-size: 0.85rem; 
-            color: #64748b; 
+        /* --- INSTITUTIONAL BRAND FOOTER (FROM IMAGE_b3d507.jpg) --- */
+        .bottom-branding-bar {
+            width: 100%;
+            padding: 30px 45px 45px 45px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: transparent;
+            border-top: 1px solid var(--border-color);
             margin-top: auto;
-            margin-bottom: 25px; 
-            text-align: center; 
-            max-width: 400px; 
+        }
+        .footer-logo-block {
+            display: flex;
+            align-items: center;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #1e3a8a;
+            letter-spacing: 0.5px;
+        }
+        /* Custom geometric logo matching image configuration vectors */
+        .logo-icon-shape {
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            border: 4px solid #0070f3;
+            border-radius: 6px;
+            margin-right: 8px;
+            transform: rotate(45deg);
+        }
+        .footer-clock-block {
+            text-align: right;
+            font-size: 1rem;
             font-weight: 700;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            opacity: 0.8;
-            background: linear-gradient(135deg, #94a3b8, #475569);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+        .footer-clock-block .sub-date {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #64748b;
         }
     </style>
 </head>
@@ -224,30 +269,44 @@
 
 <div class="kiosk-container">
     <div class="header">
-        <h1 id="kiosk-title">Brewmac Experience Center</h1>
-        <p>Visitor & Feedback Hub</p>
+        <h1 id="kiosk-title">Welcome</h1>
+        <p id="kiosk-desc">New here? Please select an action card below to check in or log your showroom feedback session.</p>
     </div>
 
+    <!-- MAIN DASHBOARD TILE SCREEN (MATCHING IMAGE REFERENCE) -->
     <div id="screen-home" class="screen active">
-        <button class="btn btn-primary pulse-glow" style="margin-top: auto;" onclick="showScreen('screen-register-options')">Start Visit</button>
-        <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-exit-identify')">End Visit / Give Feedback</button>
-        
-        <div class="company-footer">COGMAC TECHNOLOGIES MIDDLE EAST</div>
+        <div class="tile-grid">
+            <button class="tile tile-visitor-pass" onclick="modifyWelcomeLabels('Visitor Registration', 'Please select your preferred quick profiling ingestion technique below.'); showScreen('screen-register-options')">
+                <span class="tile-title">Visitor Pass</span>
+            </button>
+            <button class="tile tile-concierge" onclick="modifyWelcomeLabels('End Visit', 'Enter your reference metric key below to commit your check-out sequence.'); showScreen('screen-exit-identify')">
+                <span class="tile-title">End Visit</span>
+            </button>
+            <button class="tile tile-directory" onclick="alert('Digital Showroom Map Directory Module coming soon!')">
+                <span class="tile-title">Directory</span>
+            </button>
+            <button class="tile tile-amenities" onclick="alert('Cogmac Amenities & Interactive Catalogues Module coming soon!')">
+                <span class="tile-title">Amenities</span>
+            </button>
+        </div>
     </div>
 
+    <!-- REGISTRATION METHODS SCREEN -->
     <div id="screen-register-options" class="screen">
         <button class="btn btn-secondary" onclick="startCardScan()">📸 Scan Business Card</button>
         <button class="btn btn-secondary" onclick="simulateNfcTap()">💳 Tap Digital Card / NFC</button>
         <button class="btn btn-secondary" onclick="showScreen('screen-form-mobile')">🔢 Enter Mobile Number</button>
-        <button class="btn btn-danger" style="margin-top: auto;" onclick="showScreen('screen-home')">← Back to Main</button>
+        <button class="btn btn-danger" style="margin-top: auto;" onclick="resetToDashboardHome()">← Back to Main</button>
     </div>
 
+    <!-- WEBCAM OCR VIEW SCREEN -->
     <div id="screen-camera" class="screen">
         <video id="camera-preview" autoplay playsinline></video>
         <button class="btn btn-primary" onclick="capturePhoto()">Capture & Process Card</button>
         <button class="btn btn-secondary" onclick="stopCamera(); showScreen('screen-register-options');">Cancel</button>
     </div>
 
+    <!-- TELEPHONE INPUT SCREEN -->
     <div id="screen-form-mobile" class="screen">
         <div class="form-group" style="margin-top: auto;">
             <label>Enter Mobile Number</label>
@@ -257,8 +316,8 @@
         <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-register-options')">← Back</button>
     </div>
 
+    <!-- VERIFICATION AND PROFILE EDIT FORM SCREEN -->
     <div id="screen-confirm-fields" class="screen">
-        <h3>Verify Registration Details</h3><br>
         <input type="hidden" id="reg-method">
         <input type="hidden" id="reg-nfc-url">
         <div class="form-group">
@@ -285,8 +344,8 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
+    <!-- CATALOG SELECTION SCREEN -->
     <div id="screen-product-interest" class="screen">
-        <h3>What are you interested in today?</h3><br>
         <div class="checkbox-grid">
             <label class="checkbox-item"><input type="checkbox" name="product" value="Brewmac Classic"> Brewmac Classic</label>
             <label class="checkbox-item"><input type="checkbox" name="product" value="Brewmac Fusion"> Brewmac Fusion</label>
@@ -305,18 +364,18 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
+    <!-- CHECKOUT RECOGNITION SCREEN -->
     <div id="screen-exit-identify" class="screen">
-        <h3>Identify Yourself to Check Out</h3><br>
         <div class="form-group" style="margin-top: auto;">
             <label>Enter Mobile Number or Tap NFC Card</label>
             <input type="text" id="input-exit-lookup" placeholder="Mobile Number or NFC URL link">
         </div>
         <button class="btn btn-primary" onclick="showScreen('screen-feedback-form')">Proceed to Feedback</button>
-        <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="showScreen('screen-home')">Cancel</button>
+        <button class="btn btn-secondary" style="margin-bottom: auto;" onclick="resetToDashboardHome()">Cancel</button>
     </div>
 
+    <!-- EXIT RATING SCREEN -->
     <div id="screen-feedback-form" class="screen">
-        <h3>How was your visit today?</h3><br>
         <div class="form-group">
             <label>Rating Score (1 to 5 Stars)</label>
             <select id="feedback-score">
@@ -346,9 +405,22 @@
         <button class="btn-restart-home" onclick="triggerSuccessState('Resetting Kiosk...')">🏠 Cancel & Start Over</button>
     </div>
 
+    <!-- SUBMISSION CONFIRMATION SPLASH SCREEN -->
     <div id="screen-success" class="screen">
         <div class="alert-toast" id="success-toast" style="display: block;">Action Logged Successfully!</div>
-        <br><p style="color: #94a3b8;">This screen will reset automatically in 5 seconds.</p>
+        <br><p style="color: var(--text-muted);">This screen will reset automatically in 5 seconds.</p>
+    </div>
+
+    <!-- --- BRAND UTILITY BAR FOOTER (MATCHING IMAGE REF) --- -->
+    <div class="bottom-branding-bar">
+        <div class="footer-logo-block">
+            <div class="logo-icon-shape"></div>
+            COGMAC
+        </div>
+        <div class="footer-clock-block" id="live-clock">
+            12:30 PM
+            <div class="sub-date" id="live-date">Friday, Feb 27</div>
+        </div>
     </div>
 </div>
 
@@ -356,7 +428,19 @@
     const BACKEND_URL = "https://brewmac-kiosk-backend.onrender.com"; 
     let streamInstance = null;
 
-    fetch(`${BACKEND_URL}/api/ping`).then(r => r.json()).then(d => console.log("Server status verified on GST clock.")).catch(e => console.log("Wake-up ping routed. Waiting deployment..."));
+    // Proactive backend wakeup query
+    fetch(`${BACKEND_URL}/api/ping`).then(r => r.json()).catch(e => console.log("Wake-up routed."));
+
+    // Hardcoded global date/time controller logic matching layout panel
+    function updateLiveClock() {
+        const optionsTime = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dubai' };
+        const optionsDate = { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'Asia/Dubai' };
+        
+        const now = new Date();
+        document.getElementById('live-clock').innerHTML = `${now.toLocaleTimeString('en-US', optionsTime)} <div class="sub-date" id="live-date">${now.toLocaleDateString('en-US', optionsDate)}</div>`;
+    }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
 
     function showScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -367,13 +451,23 @@
         }
     }
 
+    function modifyWelcomeLabels(titleText, descText) {
+        document.getElementById('kiosk-title').innerText = titleText;
+        document.getElementById('kiosk-desc').innerText = descText;
+    }
+
+    function resetToDashboardHome() {
+        modifyWelcomeLabels('Welcome', 'New here? Please select an action card below to check in or log your showroom feedback session.');
+        showScreen('screen-home');
+    }
+
     async function startCardScan() {
         showScreen('screen-camera');
         try {
             streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             document.getElementById('camera-preview').srcObject = streamInstance;
         } catch (err) {
-            alert("Camera capture uninitialized, checking permissions: " + err.message);
+            alert("Camera capture uninitialized: " + err.message);
             showScreen('screen-register-options');
         }
     }
@@ -392,7 +486,7 @@
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
         stopCamera();
-        showScreen('screen-home');
+        resetToDashboardHome();
         
         const base64Image = canvas.toDataURL('image/jpeg');
         try {
@@ -410,6 +504,7 @@
             document.getElementById('reg-email').value = data.email || "";
             document.getElementById('reg-designation').value = "";
             
+            modifyWelcomeLabels('Verify Identity', 'Please confirm or edit your company card metrics profile details below.');
             showScreen('screen-confirm-fields');
         } catch (err) {
             alert("OCR engine timed out: " + err.message);
@@ -445,8 +540,10 @@
         const exitScreen = document.getElementById('screen-exit-identify');
         if (exitScreen && exitScreen.classList.contains('active')) {
             document.getElementById('input-exit-lookup').value = urlData;
+            modifyWelcomeLabels('Showroom Feedback', 'We would love to get your impressions on the Brewmac systems.');
             showScreen('screen-feedback-form');
         } else {
+            modifyWelcomeLabels('Verify Identity', 'Confirm digital card linkage details below.');
             showScreen('screen-confirm-fields');
         }
     }
@@ -463,6 +560,7 @@
         document.getElementById('reg-email').value = "";
         document.getElementById('reg-designation').value = "";
         
+        modifyWelcomeLabels('Create Profile', 'Please supply your visitor profile properties.');
         showScreen('screen-confirm-fields');
     }
 
@@ -479,9 +577,7 @@
             products: selectedProducts
         };
 
-        if(!payload.mobile || !payload.name) {
-            return alert("Verification forms require both Name and Phone entries.");
-        }
+        if(!payload.mobile || !payload.name) return alert("Verification forms require both Name and Phone entries.");
 
         try {
             const res = await fetch(`${BACKEND_URL}/api/check-in`, {
@@ -513,7 +609,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if(!res.ok) throw new Error("No active timeline session matched configuration mapping rules.");
+            if(!res.ok) throw new Error("No active session located matching parameters.");
             triggerSuccessState("Feedback received safely! Have a great day.");
         } catch (err) {
             alert("Feedback submission failed: " + err.message);
@@ -522,13 +618,14 @@
 
     function triggerSuccessState(messageText) {
         document.getElementById('success-toast').innerText = messageText;
+        modifyWelcomeLabels('Success', 'Process finalized.');
         showScreen('screen-success');
         
         document.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"]').forEach(i => i.value = "");
         document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
         document.getElementById('feedback-score').selectedIndex = 0;
         
-        setTimeout(() => { showScreen('screen-home'); }, 5000);
+        setTimeout(() => { resetToDashboardHome(); }, 5000);
     }
 </script>
 </body>
