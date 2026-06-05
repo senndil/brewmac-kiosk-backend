@@ -121,11 +121,19 @@ app.post('/api/check-in', async (req, res) => {
 
         if (!mobile) return res.status(400).json({ error: "Mobile number parameters are mandatory." });
         
-        // Clean up safe fallbacks for missing name fields
+        // --- BULLETPROOF BLANK FIELD PROTECTIONS ---
         const safeName = (name && name.trim()) ? name.trim() : "Walk-in Visitor";
-        const nameParts = safeName.split(/\s+/); // Splits cleanly on any spaces
+        const safeCompany = (company && company.trim()) ? company.trim() : "Not Specified";
+        const safeEmail = (email && email.trim()) ? email.trim() : "Not Specified";
+        const safeDesignation = (designation && designation.trim()) ? designation.trim() : "Visitor";
+        
+        // CRITICAL FIX: If nfcUrl is blank or undefined, set it to NULL so PostgreSQL doesn't trigger a unique constraint clash
+        const safeNfcUrl = (nfcUrl && nfcUrl.trim()) ? nfcUrl.trim() : null;
+        
+        const nameParts = safeName.split(/\s+/);
         const firstName = nameParts[0] || safeName;
         const lastName = nameParts.slice(1).join(' ') || "Visitor";
+        // ------------------------------------------
 
         let visitor = await dbPool.query('SELECT * FROM visitors WHERE mobile_number = $1', [mobile]);
         let visitorId, freshsalesId;
@@ -134,16 +142,16 @@ app.post('/api/check-in', async (req, res) => {
             visitorId = visitor.rows[0].id;
             freshsalesId = visitor.rows[0].freshsales_contact_id;
             
-            // Dynamic sync: Instantly updates profile metrics if modified on touchscreen
+            // Dynamic sync: Instantly updates name/company profile metrics if modified on touchscreen
             await dbPool.query(
                 `UPDATE visitors SET full_name = $1, company_name = $2, email = $3, designation = $4, nfc_url = COALESCE(nfc_url, $5), interested_products = $6 WHERE id = $7`,
-                [safeName, company, email, designation, nfcUrl, products, visitorId]
+                [safeName, safeCompany, safeEmail, safeDesignation, safeNfcUrl, products, visitorId]
             );
         } else {
             const newVis = await dbPool.query(
                 `INSERT INTO visitors (mobile_number, full_name, company_name, email, designation, nfc_url, interested_products) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-                [mobile, safeName, company, email, designation, nfcUrl, products]
+                [mobile, safeName, safeCompany, safeEmail, safeDesignation, safeNfcUrl, products]
             );
             visitorId = newVis.rows[0].id;
 
@@ -154,13 +162,13 @@ app.post('/api/check-in', async (req, res) => {
                             first_name: firstName,
                             last_name: lastName,
                             mobile_number: mobile,
-                            emails: email || null,
-                            job_title: designation || null,
+                            emails: safeEmail !== "Not Specified" ? safeEmail : null,
+                            job_title: safeDesignation !== "Visitor" ? safeDesignation : null,
                             custom_field: {
                                 cf_lead_source: "Experience Center Kiosk",
                                 cf_visit_status: "Checked In",
                                 cf_visitor_capture_method: captureMethod,
-                                cf_nfc_digital_card_url: nfcUrl || null,
+                                cf_nfc_digital_card_url: safeNfcUrl,
                                 cf_interested_products: products || []
                             }
                         }
